@@ -5,27 +5,28 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public final class ImportadorCsv {
     private static final String CAMPO = "[ \\t]*(\"(?:[^\"\\r\\n]|\"\")*+\"|[^\"\\r\\n,]*)";
     private static final Pattern FILA = Pattern.compile(
-            CAMPO + "[ \\t]*," + CAMPO + "[ \\t]*," + CAMPO + "[ \\t]*");
+            CAMPO + "[ \\t]*," + CAMPO + "[ \\t]*," + CAMPO + "(?:[ \\t]*," + CAMPO + ")?[ \\t]*");
 
     private ImportadorCsv() {
     }
 
-    public static Grafo importar(Path archivo, boolean dirigido) throws IOException {
-        Grafo grafo = new Grafo(dirigido);
+    public static Grafo importar(Path archivo) throws IOException {
+        Grafo grafo = new Grafo();
         try (BufferedReader lector = Files.newBufferedReader(archivo, StandardCharsets.UTF_8)) {
-            validarEncabezado(lector.readLine());
+            boolean conSentido = validarEncabezado(lector.readLine());
             int numeroLinea = 1;
             String linea;
             while ((linea = lector.readLine()) != null) {
                 numeroLinea++;
                 if (!linea.isBlank()) {
-                    importarConexion(grafo, linea, numeroLinea);
+                    importarConexion(grafo, linea, numeroLinea, conSentido);
                 }
             }
         }
@@ -35,29 +36,33 @@ public final class ImportadorCsv {
         return grafo;
     }
 
-    private static void validarEncabezado(String linea) throws IOException {
+    private static boolean validarEncabezado(String linea) throws IOException {
         if (linea == null) {
             throw new IOException("El CSV está vacío.");
         }
         Matcher campos = FILA.matcher(linea.startsWith("\uFEFF") ? linea.substring(1) : linea);
         if (!campos.matches() || !campo(campos, 1).equalsIgnoreCase("origen")
                 || !campo(campos, 2).equalsIgnoreCase("destino")
-                || !campo(campos, 3).equalsIgnoreCase("peso")) {
-            throw new IOException("Línea 1. El encabezado debe contener origen,destino,peso.");
+                || !campo(campos, 3).equalsIgnoreCase("peso")
+                || campos.group(4) != null && !campo(campos, 4).equalsIgnoreCase("sentido")) {
+            throw new IOException("Línea 1. El encabezado debe ser origen,destino,peso, con sentido como columna opcional.");
         }
+        return campos.group(4) != null;
     }
 
-    private static void importarConexion(Grafo grafo, String linea, int numeroLinea)
+    private static void importarConexion(Grafo grafo, String linea, int numeroLinea, boolean conSentido)
             throws IOException {
         Matcher campos = FILA.matcher(linea);
-        if (!campos.matches()) {
-            throw new IOException("Línea " + numeroLinea + ". Se esperaban tres campos CSV válidos.");
+        if (!campos.matches() || (campos.group(4) != null) != conSentido) {
+            throw new IOException("Línea " + numeroLinea + ". Se esperaban "
+                    + (conSentido ? "cuatro" : "tres") + " campos CSV válidos.");
         }
         try {
             Vertice origen = new Vertice(campo(campos, 1));
             Vertice destino = new Vertice(campo(campos, 2));
             double peso = Double.parseDouble(campo(campos, 3));
-            Arista arista = new Arista(origen, destino, peso);
+            boolean bidireccional = conSentido && leerSentido(campos);
+            Arista arista = new Arista(origen, destino, peso, bidireccional);
             grafo.registrarVertice(origen);
             grafo.registrarVertice(destino);
             grafo.registrarArista(arista);
@@ -66,6 +71,14 @@ public final class ImportadorCsv {
         } catch (IllegalArgumentException error) {
             throw new IOException("Línea " + numeroLinea + ". " + error.getMessage(), error);
         }
+    }
+
+    private static boolean leerSentido(Matcher campos) {
+        return switch (campo(campos, 4).toLowerCase(Locale.ROOT)) {
+            case "unico" -> false;
+            case "ambos" -> true;
+            default -> throw new IllegalArgumentException("El sentido debe ser unico o ambos.");
+        };
     }
 
     private static String campo(Matcher campos, int indice) {
