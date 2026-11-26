@@ -44,6 +44,17 @@ final class VentanaGrafo {
     private final ComboBox<Vertice> inicioRecorrido = selector("Vértice inicial", Vertice::nombre);
     private final ComboBox<Vertice> objetivoRecorrido = selector("Vértice objetivo (opcional)", Vertice::nombre);
     private final TextArea resultadoRecorrido = new TextArea();
+    private final ComboBox<Vertice> origenDijkstra =
+        selector("Origen de ruta", Vertice::nombre);
+
+    private final ComboBox<Vertice> destinoDijkstra =
+        selector("Destino de ruta", Vertice::nombre);
+
+    private final TextArea resultadoDijkstra = new TextArea();
+
+    private final ComboBox<String> algoritmoOrdenamiento = new ComboBox<>();
+    private final ComboBox<String> criterioOrdenamiento = new ComboBox<>();
+    private final TextArea resultadoOrdenamiento = new TextArea();
 
     VentanaGrafo(Stage ventana, EditorGrafo editor) {
         this.ventana = ventana;
@@ -55,7 +66,20 @@ final class VentanaGrafo {
         conexiones.setWrapText(true);
         conexiones.setAccessibleText("Lista de adyacencia");
         estado.setWrapText(true);
-        VBox vista = new VBox(8, resumen, conexiones, new Separator(), crearPanelRecorridos());
+        VBox vista = new VBox(
+        8,
+        resumen,
+        conexiones,
+        new Separator(),
+        crearPanelRecorridos(),
+        new Separator(),
+        crearPanelDijkstra(),
+        new Separator(),
+        crearPanelOrdenamientos()
+        );
+
+        vista.setSpacing(10);
+        vista.setPadding(new Insets(5));
         VBox.setVgrow(conexiones, Priority.ALWAYS);
         HBox contenido = new HBox(20, crearEditor(), vista);
         HBox.setHgrow(vista, Priority.ALWAYS);
@@ -65,9 +89,9 @@ final class VentanaGrafo {
 
         actualizarVista();
         ventana.setTitle("Sistema de gestión y análisis de rutas");
-        ventana.setScene(new Scene(panel, 920, 480));
-        ventana.setMinWidth(780);
-        ventana.setMinHeight(480);
+        ventana.setScene(new Scene(panel, 1150, 750));
+        ventana.setMinWidth(950);
+        ventana.setMinHeight(650);
         ventana.setOnCloseRequest(evento -> {
             if (!confirmarReemplazo()) {
                 evento.consume();
