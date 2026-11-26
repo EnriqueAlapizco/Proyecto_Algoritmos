@@ -18,3 +18,7 @@ Pulsa **Importar CSV** y selecciona `datos/conexiones.csv` para probar la import
 2. Teclea el nombre de cada vértice y pulsa **Agregar** en la sección **Vértices**. Selecciona un vértice para renombrarlo o eliminarlo.
 3. Selecciona el origen y el destino, escribe el peso y marca **Permitir ambos sentidos** si quieres ida y vuelta con el mismo peso. Pulsa **Agregar**. Para modificar una arista, selecciónala, cambia los campos y pulsa **Actualizar**.
 4. Pulsa **Exportar CSV**. Cada vértice debe participar en al menos una conexión. Si el grafo contiene una arista de ida y vuelta, el CSV añade la columna `sentido` con los valores `unico` o `ambos`.
+
+## Recorrer el grafo
+
+En **Recorridos**, selecciona el **Vértice inicial** y pulsa **BFS** para visitar por niveles o **DFS** para explorar una rama antes de pasar a la siguiente. Puedes seleccionar un **Vértice objetivo** para detener la búsqueda al encontrarlo. Si es inalcanzable, el resultado lo indica y muestra los vértices que se pudieron visitar. Pulsa **Quitar objetivo** para volver al recorrido completo. Ambos algoritmos respetan el sentido de las aristas y muestran el orden de visita.

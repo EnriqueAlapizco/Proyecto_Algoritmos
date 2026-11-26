@@ -70,4 +70,12 @@ final class EditorGrafo {
     List<Arista> conexionesDesde(Vertice vertice) {
         return grafo.conexionesDesde(vertice);
     }
+
+    List<Vertice> recorrerBfs(Vertice inicio, Vertice objetivo) {
+        return RecorridosGrafo.bfs(grafo, inicio, objetivo);
+    }
+
+    List<Vertice> recorrerDfs(Vertice inicio, Vertice objetivo) {
+        return RecorridosGrafo.dfs(grafo, inicio, objetivo);
+    }
 }

@@ -41,6 +41,9 @@ final class VentanaGrafo {
     private final ComboBox<Vertice> destino = selector("Destino", Vertice::nombre);
     private final TextField peso = new TextField();
     private final CheckBox ambosSentidos = new CheckBox("Permitir ambos sentidos");
+    private final ComboBox<Vertice> inicioRecorrido = selector("Vértice inicial", Vertice::nombre);
+    private final ComboBox<Vertice> objetivoRecorrido = selector("Vértice objetivo (opcional)", Vertice::nombre);
+    private final TextArea resultadoRecorrido = new TextArea();
 
     VentanaGrafo(Stage ventana, EditorGrafo editor) {
         this.ventana = ventana;
@@ -52,7 +55,7 @@ final class VentanaGrafo {
         conexiones.setWrapText(true);
         conexiones.setAccessibleText("Lista de adyacencia");
         estado.setWrapText(true);
-        VBox vista = new VBox(8, resumen, conexiones);
+        VBox vista = new VBox(8, resumen, conexiones, new Separator(), crearPanelRecorridos());
         VBox.setVgrow(conexiones, Priority.ALWAYS);
         HBox contenido = new HBox(20, crearEditor(), vista);
         HBox.setHgrow(vista, Priority.ALWAYS);
@@ -149,6 +152,50 @@ final class VentanaGrafo {
         }
     }
 
+    private VBox crearPanelRecorridos() {
+        Button bfs = new Button("BFS");
+        Button dfs = new Button("DFS");
+        Button quitarObjetivo = new Button("Quitar objetivo");
+        bfs.disableProperty().bind(inicioRecorrido.valueProperty().isNull());
+        dfs.disableProperty().bind(inicioRecorrido.valueProperty().isNull());
+        quitarObjetivo.disableProperty().bind(objetivoRecorrido.valueProperty().isNull());
+        bfs.setOnAction(evento -> mostrarRecorrido("BFS",
+                editor.recorrerBfs(inicioRecorrido.getValue(), objetivoRecorrido.getValue())));
+        dfs.setOnAction(evento -> mostrarRecorrido("DFS",
+                editor.recorrerDfs(inicioRecorrido.getValue(), objetivoRecorrido.getValue())));
+        quitarObjetivo.setOnAction(evento -> objetivoRecorrido.setValue(null));
+        inicioRecorrido.valueProperty().addListener((observable, anterior, actual) -> resultadoRecorrido.clear());
+        objetivoRecorrido.valueProperty().addListener((observable, anterior, actual) -> resultadoRecorrido.clear());
+
+        HBox controles = new HBox(8, inicioRecorrido, bfs, dfs);
+        controles.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(inicioRecorrido, Priority.ALWAYS);
+        HBox seleccionObjetivo = new HBox(8, objetivoRecorrido, quitarObjetivo);
+        seleccionObjetivo.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(objetivoRecorrido, Priority.ALWAYS);
+        resultadoRecorrido.setEditable(false);
+        resultadoRecorrido.setWrapText(true);
+        resultadoRecorrido.setPrefRowCount(3);
+        resultadoRecorrido.setAccessibleText("Orden de visita");
+        return new VBox(8, new Label("Recorridos"), controles, seleccionObjetivo, resultadoRecorrido);
+    }
+
+    private void mostrarRecorrido(String algoritmo, List<Vertice> orden) {
+        StringJoiner nombres = new StringJoiner(" → ");
+        for (Vertice vertice : orden) {
+            nombres.add(vertice.nombre());
+        }
+        Vertice objetivo = objetivoRecorrido.getValue();
+        String encabezado = algoritmo + " · Orden de visita";
+        if (objetivo != null) {
+            encabezado += orden.getLast().equals(objetivo)
+                    ? " · Objetivo encontrado (" + objetivo.nombre() + ")"
+                    : " · Objetivo inalcanzable (" + objetivo.nombre() + ")";
+        }
+        resultadoRecorrido.setText(encabezado + "\n" + nombres);
+        resultadoRecorrido.positionCaret(0);
+    }
+
     private void editar(Runnable operacion, String mensaje) {
         try {
             operacion.run();
@@ -224,6 +271,11 @@ final class VentanaGrafo {
         origen.getItems().setAll(ubicaciones);
         destino.getItems().setAll(ubicaciones);
         aristas.getItems().setAll(rutas);
+        inicioRecorrido.setValue(null);
+        inicioRecorrido.getItems().setAll(ubicaciones);
+        objetivoRecorrido.setValue(null);
+        objetivoRecorrido.getItems().setAll(ubicaciones);
+        resultadoRecorrido.clear();
         resumen.setText("%s · %d %s · %d %s".formatted(
                 nombreTipoGrafo(rutas),
                 ubicaciones.size(), ubicaciones.size() == 1 ? "vértice" : "vértices",
