@@ -104,10 +104,12 @@ final class VentanaGrafo {
         Button nuevo = new Button("Nuevo grafo");
         Button importar = new Button("Importar CSV");
         Button exportar = new Button("Exportar CSV");
+        Button matriz = new Button("Ver matriz");
+        matriz.setOnAction(evento -> mostrarMatriz());
         nuevo.setOnAction(evento -> crearGrafo());
         importar.setOnAction(evento -> importar());
         exportar.setOnAction(evento -> exportar());
-        HBox barra = new HBox(12, nuevo, importar, exportar);
+        HBox barra = new HBox(12, nuevo, importar, exportar, matriz);
         barra.setAlignment(Pos.CENTER_LEFT);
         return barra;
     }
@@ -176,6 +178,166 @@ final class VentanaGrafo {
         }
     }
 
+    private VBox crearPanelDijkstra() {
+
+    Button calcular = new Button("Calcular ruta mínima");
+
+    calcular.disableProperty().bind(
+            origenDijkstra.valueProperty().isNull()
+                    .or(destinoDijkstra.valueProperty().isNull())
+    );
+
+    calcular.setOnAction(evento -> {
+        try {
+            Dijkstra.Resultado resultado =
+                    editor.calcularRutaMinima(
+                            origenDijkstra.getValue(),
+                            destinoDijkstra.getValue());
+
+            if (!resultado.alcanzable()) {
+                resultadoDijkstra.setText(
+                        "No existe una ruta entre los vértices seleccionados.");
+                return;
+            }
+
+            StringJoiner ruta = new StringJoiner(" → ");
+
+            for (Vertice vertice : resultado.ruta()) {
+                ruta.add(vertice.nombre());
+            }
+
+            resultadoDijkstra.setText(
+                    "Ruta mínima: " + ruta
+                    + "\nCosto total: " + resultado.costoTotal());
+
+        } catch (IllegalArgumentException error) {
+            resultadoDijkstra.setText(error.getMessage());
+        }
+    });
+
+    resultadoDijkstra.setEditable(false);
+    resultadoDijkstra.setWrapText(true);
+    resultadoDijkstra.setPrefRowCount(2);
+
+    HBox controles = new HBox(
+            8, origenDijkstra, destinoDijkstra, calcular);
+
+    HBox.setHgrow(origenDijkstra, Priority.ALWAYS);
+    HBox.setHgrow(destinoDijkstra, Priority.ALWAYS);
+
+    return new VBox(
+            8,
+            new Label("Ruta de menor costo (Dijkstra)"),
+            controles,
+            resultadoDijkstra
+    );
+}
+
+private VBox crearPanelOrdenamientos() {
+
+    algoritmoOrdenamiento.getItems().setAll(
+            "QuickSort", "Shell Sort");
+
+    criterioOrdenamiento.getItems().setAll(
+            "Peso de arista", "Nombre de vértice");
+
+    algoritmoOrdenamiento.setValue("QuickSort");
+    criterioOrdenamiento.setValue("Peso de arista");
+
+    Button ordenar = new Button("Ordenar conexiones");
+
+    ordenar.setOnAction(evento -> {
+
+        var comparador =
+                criterioOrdenamiento.getValue().equals("Peso de arista")
+                        ? OrdenadorAristas.porPeso()
+                        : OrdenadorAristas.porNombre();
+
+        List<Arista> ordenadas;
+
+        if (algoritmoOrdenamiento.getValue().equals("QuickSort")) {
+            ordenadas = OrdenadorAristas.quickSort(
+                    editor.aristas(), comparador);
+        } else {
+            ordenadas = OrdenadorAristas.shellSort(
+                    editor.aristas(), comparador);
+        }
+
+        StringJoiner texto = new StringJoiner("\n");
+
+        for (Arista arista : ordenadas) {
+            texto.add(
+                    arista.origen().nombre()
+                    + " → "
+                    + arista.destino().nombre()
+                    + " | Peso: "
+                    + arista.peso());
+        }
+
+        resultadoOrdenamiento.setText(texto.toString());
+        resultadoOrdenamiento.positionCaret(0);
+    });
+
+    resultadoOrdenamiento.setEditable(false);
+    resultadoOrdenamiento.setWrapText(true);
+    resultadoOrdenamiento.setPrefRowCount(4);
+
+    HBox controles = new HBox(
+            8,
+            algoritmoOrdenamiento,
+            criterioOrdenamiento,
+            ordenar
+    );
+
+    return new VBox(
+            8,
+            new Label("Ordenamiento de conexiones"),
+            controles,
+            resultadoOrdenamiento
+    );
+}
+
+    private void mostrarMatriz() {
+    List<Vertice> ubicaciones = editor.vertices();
+    double[][] matriz = editor.matrizAdyacencia();
+
+    StringBuilder texto = new StringBuilder();
+
+    texto.append(String.format("%-16s", ""));
+
+    for (Vertice vertice : ubicaciones) {
+        texto.append(String.format("%-16s", vertice.nombre()));
+    }
+
+    texto.append("\n");
+
+    for (int i = 0; i < ubicaciones.size(); i++) {
+        texto.append(String.format("%-16s",
+                ubicaciones.get(i).nombre()));
+
+        for (int j = 0; j < ubicaciones.size(); j++) {
+            String valor = Double.isNaN(matriz[i][j])
+                    ? "-"
+                    : Double.toString(matriz[i][j]);
+
+            texto.append(String.format("%-16s", valor));
+        }
+
+        texto.append("\n");
+    }
+
+    TextArea area = new TextArea(texto.toString());
+    area.setEditable(false);
+    area.setWrapText(false);
+    area.setPrefSize(650, 350);
+
+    Alert alerta = new Alert(Alert.AlertType.INFORMATION);
+    alerta.setTitle("Matriz de adyacencia");
+    alerta.setHeaderText("Matriz de pesos del grafo");
+    alerta.getDialogPane().setContent(area);
+    alerta.showAndWait();
+}
+    
     private VBox crearPanelRecorridos() {
         Button bfs = new Button("BFS");
         Button dfs = new Button("DFS");
@@ -305,7 +467,15 @@ final class VentanaGrafo {
                 ubicaciones.size(), ubicaciones.size() == 1 ? "vértice" : "vértices",
                 rutas.size(), rutas.size() == 1 ? "arista" : "aristas"));
         conexiones.setText(formatearConexiones(ubicaciones));
-    }
+        origenDijkstra.setValue(null);
+        origenDijkstra.getItems().setAll(ubicaciones);
+
+        destinoDijkstra.setValue(null);
+        destinoDijkstra.getItems().setAll(ubicaciones);
+
+        resultadoDijkstra.clear();
+        resultadoOrdenamiento.clear();
+       }
 
     private String nombreTipoGrafo(List<Arista> rutas) {
         if (rutas.isEmpty()) {
