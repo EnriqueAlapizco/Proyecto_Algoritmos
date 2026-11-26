@@ -59,6 +59,10 @@ final class EditorGrafo {
     return Dijkstra.calcular(grafo, origen, destino);
     }
 
+    double[][] matrizAdyacencia() {
+    return grafo.matrizAdyacencia();
+    }
+
     boolean tieneCambiosPendientes() {
         return cambiosPendientes;
     }
