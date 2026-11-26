@@ -55,6 +55,10 @@ final class EditorGrafo {
         cambiosPendientes = true;
     }
 
+    Dijkstra.Resultado calcularRutaMinima(Vertice origen, Vertice destino) {
+    return Dijkstra.calcular(grafo, origen, destino);
+    }
+
     boolean tieneCambiosPendientes() {
         return cambiosPendientes;
     }
